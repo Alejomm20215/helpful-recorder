@@ -41,12 +41,14 @@ class RecorderService {
     required String fileName,
     required bool recordAudio,
     required String videoQuality,
+    required bool showTouches,
   }) async {
     try {
       final String? result = await _channel.invokeMethod('startRecording', {
         'fileName': fileName,
         'recordAudio': recordAudio,
         'videoQuality': videoQuality,
+        'showTouches': showTouches,
       });
       
       if (result != null) {

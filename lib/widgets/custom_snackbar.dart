@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
 class CustomSnackBar extends StatelessWidget {
@@ -101,6 +102,7 @@ class _TopSnackBarEntryState extends State<_TopSnackBarEntry> with SingleTickerP
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
   late Animation<double> _fadeAnimation;
+  Timer? _autoDismissTimer;
 
   @override
   void initState() {
@@ -131,14 +133,19 @@ class _TopSnackBarEntryState extends State<_TopSnackBarEntry> with SingleTickerP
     // Start animation
     _controller.forward();
 
-    // Auto dismiss
-    Future.delayed(const Duration(seconds: 3), () {
+    // Auto dismiss after 2.5 seconds
+    _autoDismissTimer = Timer(const Duration(milliseconds: 2500), () {
       if (mounted) {
-        _controller.reverse().then((_) {
-          if (mounted) {
-            widget.onDismiss();
-          }
-        });
+        _dismiss();
+      }
+    });
+  }
+
+  void _dismiss() {
+    _autoDismissTimer?.cancel();
+    _controller.reverse().then((_) {
+      if (mounted) {
+        widget.onDismiss();
       }
     });
   }
@@ -146,6 +153,7 @@ class _TopSnackBarEntryState extends State<_TopSnackBarEntry> with SingleTickerP
   @override
   void dispose() {
     _controller.dispose();
+    _autoDismissTimer?.cancel();
     super.dispose();
   }
 
@@ -157,13 +165,25 @@ class _TopSnackBarEntryState extends State<_TopSnackBarEntry> with SingleTickerP
       right: 0,
       child: Material(
         color: Colors.transparent,
-        child: SlideTransition(
-          position: _offsetAnimation,
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: CustomSnackBar(
-              message: widget.message,
-              isError: widget.isError,
+        child: GestureDetector(
+          onTap: () {
+            // Tap to dismiss
+            _dismiss();
+          },
+          onPanEnd: (details) {
+            // Swipe down to dismiss
+            if (details.velocity.pixelsPerSecond.dy > 500) {
+              _dismiss();
+            }
+          },
+          child: SlideTransition(
+            position: _offsetAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: CustomSnackBar(
+                message: widget.message,
+                isError: widget.isError,
+              ),
             ),
           ),
         ),
