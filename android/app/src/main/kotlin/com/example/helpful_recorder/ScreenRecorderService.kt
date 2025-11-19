@@ -326,7 +326,7 @@ class ScreenRecorderService : Service() {
             stopForeground(true)
             stopSelf()
             // Notify Flutter that recording was stopped from native overlay
-            MainActivity.instance?.sendEventToFlutter("RECORDING_STOPPED")
+            MainActivity.instance?.sendEventToFlutter("RECORDING_STOPPED:$mFilePath")
         }
 
         btnPause.setOnClickListener {

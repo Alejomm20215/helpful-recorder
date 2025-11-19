@@ -19,9 +19,14 @@ class RecorderCubit extends Cubit<RecorderState> {
   
   void _listenToRecordingEvents() {
     _eventsSubscription = _recorderService.recordingEvents.listen((event) {
-      if (event == 'RECORDING_STOPPED') {
+      if (event.startsWith('RECORDING_STOPPED')) {
         // When native service stops recording, reset to initial state
-        emit(RecorderInitial());
+        if (event.contains(':')) {
+          final path = event.substring('RECORDING_STOPPED:'.length);
+          emit(RecorderSuccess(path));
+        } else {
+          emit(RecorderInitial());
+        }
         _stopAccelerometer();
       } else if (event == 'RECORDING_RESTART_REQUESTED') {
         // When restart is requested from native overlay, automatically start new recording with countdown
