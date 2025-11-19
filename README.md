@@ -145,10 +145,6 @@ dependencies:
 4. Push to branch (`git push origin feature/amazing-feature`)
 5. Open Pull Request
 
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
-
 ---
 
 **Built with Flutter & Kotlin**
