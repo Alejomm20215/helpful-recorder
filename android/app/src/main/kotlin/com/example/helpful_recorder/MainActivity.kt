@@ -95,7 +95,7 @@ class MainActivity : FlutterActivity() {
                 // Tell Flutter we are ready to countdown
                 mResult?.success(true)
             } else {
-                mResult?.error("PERMISSION_DENIED", "Screen recording permission denied", null)
+                mResult?.error("PERMISSION_DENIED", "Permission not granted or lost", null)
             }
             mResult = null
         }

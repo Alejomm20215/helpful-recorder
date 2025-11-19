@@ -36,9 +36,17 @@ class RecorderService {
     }
   }
 
-  Future<String> startRecording({required String fileName}) async {
+  Future<String> startRecording({
+    required String fileName,
+    required bool recordAudio,
+    required String videoQuality,
+  }) async {
     try {
-      final String? result = await _channel.invokeMethod('startRecording', {'fileName': fileName});
+      final String? result = await _channel.invokeMethod('startRecording', {
+        'fileName': fileName,
+        'recordAudio': recordAudio,
+        'videoQuality': videoQuality,
+      });
       
       if (result != null) {
         log("Recording started: $fileName");

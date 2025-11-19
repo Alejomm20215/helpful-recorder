@@ -1,14 +1,19 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sensors_plus/sensors_plus.dart';
 import '../recorder_service.dart';
 import 'recorder_state.dart';
+import 'settings_cubit.dart';
 
 class RecorderCubit extends Cubit<RecorderState> {
   final RecorderService _recorderService;
+  final SettingsCubit _settingsCubit;
   Timer? _countdownTimer;
   StreamSubscription? _eventsSubscription;
+  StreamSubscription? _accelerometerSubscription;
 
-  RecorderCubit(this._recorderService) : super(RecorderInitial()) {
+  RecorderCubit(this._recorderService, this._settingsCubit) : super(RecorderInitial()) {
     _listenToRecordingEvents();
   }
   
@@ -17,15 +22,42 @@ class RecorderCubit extends Cubit<RecorderState> {
       if (event == 'RECORDING_STOPPED') {
         // When native service stops recording, reset to initial state
         emit(RecorderInitial());
+        _stopAccelerometer();
       } else if (event == 'RECORDING_RESTART_REQUESTED') {
         // When restart is requested from native overlay, automatically start new recording with countdown
         emit(RecorderInitial());
+        _stopAccelerometer();
         // Small delay to ensure UI updates, then start new recording
         Future.delayed(const Duration(milliseconds: 300), () {
           prepareRecording();
         });
       }
     });
+  }
+
+  void _startAccelerometer() {
+    if (!_settingsCubit.state.shakeToStop) return;
+
+    _accelerometerSubscription?.cancel();
+    _accelerometerSubscription = accelerometerEvents.listen((AccelerometerEvent event) {
+      double g = 9.8;
+      double x = event.x;
+      double y = event.y;
+      double z = event.z;
+
+      // Calculate total acceleration
+      double gForce = sqrt(x * x + y * y + z * z) / g;
+
+      // Threshold for shake (adjust as needed, 2.5 is a strong shake)
+      if (gForce > 2.5) {
+        stopRecording();
+      }
+    });
+  }
+
+  void _stopAccelerometer() {
+    _accelerometerSubscription?.cancel();
+    _accelerometerSubscription = null;
   }
 
   Future<void> checkPermissions() async {
@@ -63,7 +95,7 @@ class RecorderCubit extends Cubit<RecorderState> {
         startCountdown();
       } else {
         // User denied system dialog
-        emit(const RecorderFailure("Screen recording permission denied by user"));
+        emit(const RecorderFailure("Screen recording was not allowed"));
       }
     } catch (e) {
       emit(RecorderFailure(e.toString()));
@@ -71,7 +103,7 @@ class RecorderCubit extends Cubit<RecorderState> {
   }
 
   void startCountdown() {
-    int count = 5;
+    int count = _settingsCubit.state.countdownTime;
     emit(RecorderCountdown(count));
 
     _countdownTimer?.cancel();
@@ -97,9 +129,17 @@ class RecorderCubit extends Cubit<RecorderState> {
       
       // Start Native Recording (Permission already granted in prepare step)
       String fileName = "Rec_${DateTime.now().millisecondsSinceEpoch}";
-      await _recorderService.startRecording(fileName: fileName);
+      
+      final settings = _settingsCubit.state;
+      
+      await _recorderService.startRecording(
+        fileName: fileName,
+        recordAudio: settings.recordAudio,
+        videoQuality: settings.videoQuality.name,
+      );
 
-      // Overlay is handled natively now
+      // Start shake detection if enabled
+      _startAccelerometer();
 
     } catch (e) {
       emit(RecorderFailure(e.toString()));
@@ -108,6 +148,7 @@ class RecorderCubit extends Cubit<RecorderState> {
 
   Future<void> stopRecording() async {
     try {
+      _stopAccelerometer();
       final path = await _recorderService.stopRecording();
       emit(RecorderSuccess(path));
     } catch (e) {
@@ -123,6 +164,7 @@ class RecorderCubit extends Cubit<RecorderState> {
   Future<void> close() {
     _countdownTimer?.cancel();
     _eventsSubscription?.cancel();
+    _accelerometerSubscription?.cancel();
     return super.close();
   }
 }

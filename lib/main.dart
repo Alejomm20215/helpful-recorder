@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:open_file/open_file.dart';
 import 'cubits/recorder_cubit.dart';
 import 'cubits/recorder_state.dart';
+import 'cubits/settings_cubit.dart';
+import 'cubits/settings_state.dart';
 import 'overlay_widget.dart';
 import 'recorder_service.dart';
 import 'widgets/custom_snackbar.dart';
+import 'settings_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -24,21 +28,43 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Helpful Recorder',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF000000),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF6C63FF),
-          secondary: Color(0xFF03DAC6),
-          surface: Color(0xFF1E1E1E),
-        ),
-        useMaterial3: true,
-      ),
-      home: BlocProvider(
-        create: (context) => RecorderCubit(RecorderService()),
-        child: const RecorderHomePage(),
+    return BlocProvider(
+      create: (context) => SettingsCubit(),
+      child: BlocBuilder<SettingsCubit, SettingsState>(
+        builder: (context, state) {
+          return BlocProvider(
+            create: (context) => RecorderCubit(
+              RecorderService(),
+              context.read<SettingsCubit>(),
+            ),
+            child: MaterialApp(
+              title: 'Helpful Recorder',
+              debugShowCheckedModeBanner: false,
+              themeMode: state.themeMode,
+              theme: ThemeData.light().copyWith(
+                scaffoldBackgroundColor: const Color(0xFFF5F5F5),
+                colorScheme: const ColorScheme.light(
+                  primary: Color(0xFFFF3B30), // Red
+                  secondary: Color(0xFFFFFFFF), // White
+                  surface: Colors.white,
+                  onSurface: Colors.black,
+                ),
+                useMaterial3: true,
+              ),
+              darkTheme: ThemeData.dark().copyWith(
+                scaffoldBackgroundColor: const Color(0xFF000000),
+                colorScheme: const ColorScheme.dark(
+                  primary: Color(0xFFFF3B30), // Red
+                  secondary: Color(0xFFFFFFFF), // White
+                  surface: Color(0xFF1E1E1E),
+                  onSurface: Colors.white,
+                ),
+                useMaterial3: true,
+              ),
+              home: const RecorderHomePage(),
+            ),
+          );
+        },
       ),
     );
   }
@@ -88,16 +114,40 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
           }
         },
         builder: (context, state) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final primaryColor = Theme.of(context).colorScheme.primary;
+          final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+          
           return Stack(
             children: [
               // Background
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: RadialGradient(
                     center: Alignment.center,
                     radius: 1.5,
-                    colors: [Color(0xFF2A2A2A), Color(0xFF000000)],
+                    colors: isDark 
+                      ? [const Color(0xFF2A2A2A), const Color(0xFF000000)]
+                      : [const Color(0xFFFFFFFF), const Color(0xFFF5F5F5)],
                   ),
+                ),
+              ),
+
+              // Settings Button
+              Positioned(
+                top: 50,
+                right: 20,
+                child: IconButton(
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsPage()),
+                  ),
+                  icon: Icon(
+                    Icons.settings_rounded,
+                    color: onSurfaceColor,
+                    size: 28,
+                  ),
+                  splashRadius: 24,
                 ),
               ),
 
@@ -118,7 +168,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 4,
-                          color: state is RecorderRecording ? Colors.redAccent : Colors.grey,
+                          color: state is RecorderRecording ? primaryColor : onSurfaceColor.withOpacity(0.5),
                         ),
                       ),
                     ),
@@ -147,10 +197,10 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
                               height: 120,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: isRecording ? Colors.redAccent : Colors.white,
+                                color: isRecording ? primaryColor : (isDark ? Colors.white : primaryColor),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: (isRecording ? Colors.redAccent : Colors.white).withOpacity(0.4),
+                                    color: (isRecording ? primaryColor : (isDark ? Colors.white : primaryColor)).withOpacity(0.4),
                                     blurRadius: 30,
                                     spreadRadius: 5,
                                   )
@@ -164,7 +214,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
                                     isRecording ? Icons.stop_rounded : Icons.circle,
                                     key: ValueKey(isRecording),
                                     size: 50,
-                                    color: isRecording ? Colors.white : Colors.redAccent,
+                                    color: isRecording ? Colors.white : (isDark ? primaryColor : Colors.white),
                                   ),
                                 ),
                               ),
@@ -177,9 +227,9 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
                     const SizedBox(height: 30),
                     
                     if (state is! RecorderRecording && state is! RecorderCountdown)
-                      const Text(
+                      Text(
                         'Tap to Record',
-                        style: TextStyle(color: Colors.white38),
+                        style: TextStyle(color: onSurfaceColor.withOpacity(0.4)),
                       ),
 
                     const Spacer(),
@@ -204,42 +254,55 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
   }
 
   Widget _buildSuccessCard(BuildContext context, String path) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white10),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+        ),
+        boxShadow: isDark ? [] : [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.black,
+              color: primaryColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+            child: Icon(Icons.play_arrow_rounded, color: primaryColor),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Recording Saved',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: onSurfaceColor),
                 ),
                 Text(
                   'Gallery/Movies/HelpfulRecorder',
-                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                  style: TextStyle(fontSize: 12, color: onSurfaceColor.withOpacity(0.5)),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.open_in_new_rounded, color: Colors.white),
+            icon: Icon(Icons.open_in_new_rounded, color: onSurfaceColor),
             onPressed: () => OpenFile.open(path),
           ),
         ],
@@ -248,10 +311,14 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
   }
 
   Widget _buildCountdownOverlay(BuildContext context, int count) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = Theme.of(context).colorScheme.primary;
+    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
+    
     return Container(
       width: double.infinity,
       height: double.infinity,
-      color: Colors.black.withOpacity(0.85),
+      color: (isDark ? Colors.black : Colors.white).withOpacity(0.95),
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -275,7 +342,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.3 * (1 - value)), // Fade out
+                          color: onSurfaceColor.withOpacity(0.3 * (1 - value)), // Fade out
                           width: 2,
                         ),
                       ),
@@ -296,13 +363,13 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
                     '$count',
                     key: ValueKey(count),
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 120,
                       fontWeight: FontWeight.w200, // Thinner font
-                      color: Colors.white,
+                      color: onSurfaceColor,
                       letterSpacing: -5,
                       shadows: [
-                        Shadow(color: Colors.blueAccent, blurRadius: 20),
+                        Shadow(color: primaryColor, blurRadius: 20),
                       ],
                     ),
                   ),
@@ -316,27 +383,28 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
               child: TextButton(
                 onPressed: () => context.read<RecorderCubit>().skipCountdown(),
                 style: TextButton.styleFrom(
-                  foregroundColor: Colors.white,
+                  foregroundColor: onSurfaceColor,
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  backgroundColor: Colors.white.withOpacity(0.05),
+                  backgroundColor: onSurfaceColor.withOpacity(0.05),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(30),
-                    side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                    side: BorderSide(color: onSurfaceColor.withOpacity(0.1)),
                   ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  children: const [
+                  children: [
                     Text(
                       "SKIP", 
                       style: TextStyle(
                         fontSize: 14, 
                         fontWeight: FontWeight.w600, 
-                        letterSpacing: 3
+                        letterSpacing: 3,
+                        color: onSurfaceColor,
                       )
                     ),
-                    SizedBox(width: 8),
-                    Icon(Icons.skip_next_rounded, size: 18),
+                    const SizedBox(width: 8),
+                    Icon(Icons.skip_next_rounded, size: 18, color: onSurfaceColor),
                   ],
                 ),
               ),
