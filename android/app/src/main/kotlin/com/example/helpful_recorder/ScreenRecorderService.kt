@@ -49,6 +49,9 @@ class ScreenRecorderService : Service() {
     private var overlayBackgroundColor: Int = 0xCC000000.toInt()
     private var overlayPanelColor: Int = 0xFF1F1F1F.toInt()
     private var overlayIconColor: Int = 0xFFFFFFFF.toInt()
+    private var showTouchesEnabled: Boolean = false
+    private val touchIndicators = mutableListOf<View>()
+    private var touchOverlayView: View? = null
 
     // For MediaStore
     private var mCurrentUri: android.net.Uri? = null
@@ -93,11 +96,15 @@ class ScreenRecorderService : Service() {
                 val resultCode = intent.getIntExtra(EXTRA_RESULT_CODE, 0)
                 val data = intent.getParcelableExtra<Intent>(EXTRA_DATA)
                 val fileName = intent.getStringExtra(EXTRA_FILENAME) ?: "recording"
+                val recordAudio = intent.getBooleanExtra("recordAudio", true)
+                val videoQuality = intent.getStringExtra("videoQuality") ?: "high"
+                val showTouches = intent.getBooleanExtra("showTouches", false)
 
                 if (resultCode != 0 && data != null) {
                     mResultCode = resultCode
                     mData = data
                     mFileName = fileName
+                    showTouchesEnabled = showTouches
                     startRecording(resultCode, data, fileName)
                 }
             }
@@ -207,6 +214,10 @@ class ScreenRecorderService : Service() {
             mMediaRecorder?.start()
             // Show floating controls ONLY after recording starts successfully
             showFloatingControls()
+            // Initialize touch visualization if enabled
+            if (showTouchesEnabled) {
+                setupTouchVisualization()
+            }
         } catch (e: IllegalStateException) {
             Log.e("ScreenRecorderService", "Error starting recorder: ${e.message}")
             stopRecordingHelper()
@@ -247,8 +258,10 @@ class ScreenRecorderService : Service() {
             mMediaProjection = null
             mVirtualDisplay = null
             mCurrentUri = null
-            // Remove floating controls when recording stops
+            // Remove floating controls, touch overlay, and touch indicators when recording stops
             removeFloatingControls()
+            removeTouchOverlay()
+            clearAllTouchIndicators()
         }
     }
 
@@ -376,6 +389,111 @@ class ScreenRecorderService : Service() {
             mFloatingView = null
             mFloatingParams = null
             mIsFloatingViewAdded = false
+        }
+    }
+
+    private fun showTouchIndicator(x: Float, y: Float) {
+        if (!showTouchesEnabled) return
+
+        val touchView = View(this).apply {
+            setBackgroundResource(R.drawable.bg_circle_red)
+            background?.setTint(0xFFFF4444.toInt()) // Red color for touch indicator
+        }
+
+        val params = WindowManager.LayoutParams(
+            60, // Size of touch indicator
+            60,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, // Don't interfere with touches
+            android.graphics.PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            this.x = (x - 30).toInt() // Center on touch point
+            this.y = (y - 30).toInt()
+        }
+
+        try {
+            mWindowManager?.addView(touchView, params)
+            touchIndicators.add(touchView)
+
+            // Auto-remove after animation
+            touchView.postDelayed({
+                removeTouchIndicator(touchView)
+            }, 500) // Show for 500ms
+        } catch (e: Exception) {
+            Log.e("ScreenRecorderService", "Failed to show touch indicator: ${e.message}")
+        }
+    }
+
+    private fun removeTouchIndicator(view: View) {
+        try {
+            mWindowManager?.removeView(view)
+            touchIndicators.remove(view)
+        } catch (e: Exception) {
+            Log.e("ScreenRecorderService", "Failed to remove touch indicator: ${e.message}")
+        }
+    }
+
+    private fun clearAllTouchIndicators() {
+        touchIndicators.forEach { view ->
+            try {
+                mWindowManager?.removeView(view)
+            } catch (e: Exception) {
+                // Ignore cleanup errors
+            }
+        }
+        touchIndicators.clear()
+    }
+
+    private fun setupTouchVisualization() {
+        // Create a transparent overlay that covers the entire screen to detect touches
+        touchOverlayView = View(this).apply {
+            setBackgroundColor(0x00000000) // Completely transparent
+        }
+
+        val overlayParams = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.MATCH_PARENT,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+            WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, // Allow touches to pass through
+            android.graphics.PixelFormat.TRANSLUCENT
+        )
+
+        touchOverlayView?.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> {
+                    showTouchIndicator(event.rawX, event.rawY)
+                    false // Don't consume the touch event
+                }
+                else -> false
+            }
+        }
+
+        try {
+            mWindowManager?.addView(touchOverlayView, overlayParams)
+        } catch (e: Exception) {
+            Log.e("ScreenRecorderService", "Failed to add touch overlay: ${e.message}")
+        }
+    }
+
+    private fun removeTouchOverlay() {
+        if (touchOverlayView != null) {
+            try {
+                mWindowManager?.removeView(touchOverlayView)
+            } catch (e: Exception) {
+                Log.e("ScreenRecorderService", "Failed to remove touch overlay: ${e.message}")
+            }
+            touchOverlayView = null
         }
     }
 
