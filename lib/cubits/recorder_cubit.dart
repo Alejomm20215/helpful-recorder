@@ -141,7 +141,7 @@ class RecorderCubit extends Cubit<RecorderState> {
         fileName: fileName,
         recordAudio: settings.recordAudio,
         videoQuality: settings.videoQuality.name,
-        showTouches: settings.showTouches,
+        showTouches: false, // Removed feature
       );
 
       // Start shake detection if enabled
