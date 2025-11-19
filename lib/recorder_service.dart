@@ -20,6 +20,7 @@ class RecorderService {
       Permission.microphone,
       Permission.notification, 
       Permission.systemAlertWindow,
+      Permission.manageExternalStorage,
     ].request();
     
     // We don't need FlutterOverlayWindow permission anymore as we use native overlay

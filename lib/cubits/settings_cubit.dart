@@ -14,7 +14,6 @@ class SettingsCubit extends Cubit<SettingsState> {
       
       final qualityIndex = prefs.getInt('videoQuality') ?? 0;
       final recordAudio = prefs.getBool('recordAudio') ?? true;
-      final showTouches = prefs.getBool('showTouches') ?? false;
       final countdownTime = prefs.getInt('countdownTime') ?? 5;
       final shakeToStop = prefs.getBool('shakeToStop') ?? false;
       final isDarkMode = prefs.getBool('isDarkMode') ?? true;
@@ -22,7 +21,6 @@ class SettingsCubit extends Cubit<SettingsState> {
       emit(SettingsState(
         videoQuality: VideoQuality.values[qualityIndex],
         recordAudio: recordAudio,
-        showTouches: showTouches,
         countdownTime: countdownTime,
         shakeToStop: shakeToStop,
         themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
@@ -44,12 +42,6 @@ class SettingsCubit extends Cubit<SettingsState> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('recordAudio', value);
     emit(state.copyWith(recordAudio: value));
-  }
-
-  Future<void> toggleShowTouches(bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('showTouches', value);
-    emit(state.copyWith(showTouches: value));
   }
 
   Future<void> setCountdownTime(int seconds) async {
