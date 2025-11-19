@@ -105,7 +105,7 @@ class SettingsPage extends StatelessWidget {
                         context,
                         icon: Icons.touch_app_rounded,
                         title: 'Show Touches',
-                        subtitle: 'Visualize taps on screen',
+                        subtitle: 'Display touch indicators while recording',
                         value: state.showTouches,
                         onChanged: (val) => context.read<SettingsCubit>().toggleShowTouches(val),
                         showDivider: false,

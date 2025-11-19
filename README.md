@@ -42,14 +42,14 @@ flutter run
 
 ## Settings
 
-| Setting | Options | Default |
-|---------|---------|---------|
-| Video Quality | High/Medium/Low | High |
-| Record Audio | On/Off | On |
-| Countdown | 3s/5s/10s | 5s |
-| Shake to Stop | On/Off | Off |
-| Show Touches | On/Off | Off |
-| Theme | Dark/Light | System |
+| Setting | Options | Default | Description |
+|---------|---------|---------|-------------|
+| Video Quality | High/Medium/Low | High | Recording resolution and quality |
+| Record Audio | On/Off | On | Include microphone audio |
+| Countdown | 3s/5s/10s | 5s | Delay before recording starts |
+| Shake to Stop | On/Off | Off | Stop recording by shaking device |
+| Show Touches | On/Off | Off | Display touch indicators while recording |
+| Theme | Dark/Light | System | App appearance mode |
 
 ## Architecture
 

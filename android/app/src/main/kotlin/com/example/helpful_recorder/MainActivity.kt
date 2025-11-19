@@ -68,9 +68,23 @@ class MainActivity : FlutterActivity() {
                     val serviceIntent = Intent(this, ScreenRecorderService::class.java)
                     serviceIntent.action = ScreenRecorderService.ACTION_STOP
                     startService(serviceIntent)
-                    
-                    val path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES).absolutePath + "/HelpfulRecorder/$mFileName.mp4"
-                    result.success(path)
+
+                    // Give the service a moment to finish saving
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        try {
+                            // Check if the file actually exists before returning success
+                            val expectedPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES).absolutePath + "/HelpfulRecorder/$mFileName.mp4"
+                            val file = java.io.File(expectedPath)
+
+                            if (file.exists() && file.length() > 0) {
+                                result.success(expectedPath)
+                            } else {
+                                result.error("SAVE_FAILED", "Recording file was not saved properly", null)
+                            }
+                        } catch (e: Exception) {
+                            result.error("SAVE_FAILED", "Error checking saved file: ${e.message}", null)
+                        }
+                    }, 500) // 500ms delay to allow file saving to complete
                 }
                 "updateOverlayStyle" -> {
                     val bg = call.argument<Int>("backgroundColor") ?: 0xCC000000.toInt()

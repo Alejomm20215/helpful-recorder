@@ -236,7 +236,7 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
 
                     // Last Recording Card
                     if (state is RecorderSuccess)
-                      _buildSuccessCard(context, state.path),
+                      _buildDismissibleSuccessCard(context, state.path),
                       
                     const SizedBox(height: 20),
                   ],
@@ -253,62 +253,72 @@ class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerPr
     );
   }
 
-  Widget _buildSuccessCard(BuildContext context, String path) {
+  Widget _buildDismissibleSuccessCard(BuildContext context, String path) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final primaryColor = Theme.of(context).colorScheme.primary;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-    
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+
+    return Dismissible(
+      key: const Key('success_card'),
+      direction: DismissDirection.endToStart, // Swipe from right to left
+      onDismissed: (direction) {
+        // Reset to initial state when dismissed
+        context.read<RecorderCubit>().reset();
+      },
+      background: const SizedBox.shrink(), // No background visual feedback
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.1),
+          ),
+          boxShadow: isDark ? [] : [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        boxShadow: isDark ? [] : [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: primaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.play_arrow_rounded, color: primaryColor),
             ),
-            child: Icon(Icons.play_arrow_rounded, color: primaryColor),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Recording Saved',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: onSurfaceColor),
-                ),
-                Text(
-                  'Gallery/Movies/HelpfulRecorder',
-                  style: TextStyle(fontSize: 12, color: onSurfaceColor.withOpacity(0.5)),
-                ),
-              ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recording Saved',
+                    style: TextStyle(fontWeight: FontWeight.bold, color: onSurfaceColor),
+                  ),
+                  Text(
+                    'Tap to open • Swipe to dismiss',
+                    style: TextStyle(fontSize: 12, color: onSurfaceColor.withOpacity(0.5)),
+                  ),
+                ],
+              ),
             ),
-          ),
-          IconButton(
-            icon: Icon(Icons.open_in_new_rounded, color: onSurfaceColor),
-            onPressed: () => OpenFile.open(path),
-          ),
-        ],
+            IconButton(
+              icon: Icon(Icons.open_in_new_rounded, color: onSurfaceColor),
+              onPressed: () => OpenFile.open(path),
+            ),
+          ],
+        ),
       ),
     );
   }
+
 
   Widget _buildCountdownOverlay(BuildContext context, int count) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
