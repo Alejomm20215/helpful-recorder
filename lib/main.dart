@@ -1,122 +1,349 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:open_file/open_file.dart';
+import 'cubits/recorder_cubit.dart';
+import 'cubits/recorder_state.dart';
+import 'overlay_widget.dart';
+import 'recorder_service.dart';
+import 'widgets/custom_snackbar.dart';
 
 void main() {
   runApp(const MyApp());
 }
 
+@pragma("vm:entry-point")
+void overlayMain() {
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: OverlayWidget(),
+  ));
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+      title: 'Helpful Recorder',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF000000),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFF6C63FF),
+          secondary: Color(0xFF03DAC6),
+          surface: Color(0xFF1E1E1E),
+        ),
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: BlocProvider(
+        create: (context) => RecorderCubit(RecorderService()),
+        child: const RecorderHomePage(),
+      ),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class RecorderHomePage extends StatefulWidget {
+  const RecorderHomePage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<RecorderHomePage> createState() => _RecorderHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _RecorderHomePageState extends State<RecorderHomePage> with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+  @override
+  void initState() {
+    super.initState();
+    context.read<RecorderCubit>().checkPermissions();
+    
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+    
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      body: BlocConsumer<RecorderCubit, RecorderState>(
+        listener: (context, state) {
+          if (state is RecorderFailure) {
+            CustomSnackBar.show(context, message: 'Error: ${state.error}', isError: true);
+          } else if (state is RecorderSuccess) {
+            CustomSnackBar.show(context, message: 'Saved to Gallery!');
+          }
+        },
+        builder: (context, state) {
+          return Stack(
+            children: [
+              // Background
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment.center,
+                    radius: 1.5,
+                    colors: [Color(0xFF2A2A2A), Color(0xFF000000)],
+                  ),
+                ),
+              ),
+
+              // Main Content
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(),
+                    
+                    // Status Text
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: Text(
+                        state is RecorderRecording ? 'RECORDING' : 'READY',
+                        key: ValueKey(state.runtimeType),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 4,
+                          color: state is RecorderRecording ? Colors.redAccent : Colors.grey,
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 60),
+
+                    // Main Button
+                    GestureDetector(
+                      onTap: () {
+                        if (state is RecorderRecording) {
+                          context.read<RecorderCubit>().stopRecording();
+                        } else if (state is RecorderInitial || state is RecorderSuccess || state is RecorderFailure) {
+                          context.read<RecorderCubit>().prepareRecording();
+                        }
+                      },
+                      child: AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) {
+                          final isRecording = state is RecorderRecording;
+                          final scale = isRecording ? _pulseAnimation.value : 1.0;
+                          
+                          return Transform.scale(
+                            scale: scale,
+                            child: Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: isRecording ? Colors.redAccent : Colors.white,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: (isRecording ? Colors.redAccent : Colors.white).withOpacity(0.4),
+                                    blurRadius: 30,
+                                    spreadRadius: 5,
+                                  )
+                                ],
+                              ),
+                              child: Center(
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
+                                  child: Icon(
+                                    isRecording ? Icons.stop_rounded : Icons.circle,
+                                    key: ValueKey(isRecording),
+                                    size: 50,
+                                    color: isRecording ? Colors.white : Colors.redAccent,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 30),
+                    
+                    if (state is! RecorderRecording && state is! RecorderCountdown)
+                      const Text(
+                        'Tap to Record',
+                        style: TextStyle(color: Colors.white38),
+                      ),
+
+                    const Spacer(),
+
+                    // Last Recording Card
+                    if (state is RecorderSuccess)
+                      _buildSuccessCard(context, state.path),
+                      
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+
+              // Countdown Overlay
+              if (state is RecorderCountdown)
+                _buildCountdownOverlay(context, state.count),
+            ],
+          );
+        },
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+    );
+  }
+
+  Widget _buildSuccessCard(BuildContext context, String path) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.play_arrow_rounded, color: Colors.white),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Recording Saved',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                Text(
+                  'Gallery/Movies/HelpfulRecorder',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.open_in_new_rounded, color: Colors.white),
+            onPressed: () => OpenFile.open(path),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCountdownOverlay(BuildContext context, int count) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Colors.black.withOpacity(0.85),
+      child: Center(
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Spacer(),
+            // Animated Number with Circle
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                // Pulsing Circle
+                TweenAnimationBuilder<double>(
+                  key: ValueKey(count), // Restart animation on count change
+                  tween: Tween(begin: 0.0, end: 1.0),
+                  duration: const Duration(milliseconds: 900), // Slightly longer to fill the second
+                  curve: Curves.easeOutQuad,
+                  builder: (context, value, child) {
+                    return Container(
+                      width: 250 + (value * 50), // Expand size slightly
+                      height: 250 + (value * 50),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.3 * (1 - value)), // Fade out
+                          width: 2,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                // Number
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.5, end: 1.0).animate(anim),
+                      child: child,
+                    ),
+                  ),
+                  child: Text(
+                    '$count',
+                    key: ValueKey(count),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 120,
+                      fontWeight: FontWeight.w200, // Thinner font
+                      color: Colors.white,
+                      letterSpacing: -5,
+                      shadows: [
+                        Shadow(color: Colors.blueAccent, blurRadius: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Spacer(),
+            // Skip Button
+            Padding(
+              padding: const EdgeInsets.only(bottom: 80),
+              child: TextButton(
+                onPressed: () => context.read<RecorderCubit>().skipCountdown(),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                  backgroundColor: Colors.white.withOpacity(0.05),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    side: BorderSide(color: Colors.white.withOpacity(0.1)),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Text(
+                      "SKIP", 
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.w600, 
+                        letterSpacing: 3
+                      )
+                    ),
+                    SizedBox(width: 8),
+                    Icon(Icons.skip_next_rounded, size: 18),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }

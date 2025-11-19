@@ -1,0 +1,7 @@
+﻿<resources>
+    <string name="app_name">Helpful Recorder</string>
+    <string name="stop_recording">Stop recording</string>
+    <string name="pause_recording">Pause recording</string>
+    <string name="resume_recording">Resume recording</string>
+    <string name="restart_recording">Restart recording</string>
+</resources>
