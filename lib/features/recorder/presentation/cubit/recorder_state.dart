@@ -19,7 +19,28 @@ class RecorderCountdown extends RecorderState {
   List<Object?> get props => [count];
 }
 
-class RecorderRecording extends RecorderState {}
+class RecorderRecording extends RecorderState {
+  final bool isDrawingEnabled;
+  final int currentDrawingColor;
+
+  const RecorderRecording({
+    this.isDrawingEnabled = false,
+    this.currentDrawingColor = 0xFFFF0000, // Red
+  });
+
+  RecorderRecording copyWith({
+    bool? isDrawingEnabled,
+    int? currentDrawingColor,
+  }) {
+    return RecorderRecording(
+      isDrawingEnabled: isDrawingEnabled ?? this.isDrawingEnabled,
+      currentDrawingColor: currentDrawingColor ?? this.currentDrawingColor,
+    );
+  }
+
+  @override
+  List<Object?> get props => [isDrawingEnabled, currentDrawingColor];
+}
 
 class RecorderSuccess extends RecorderState {
   final String path;

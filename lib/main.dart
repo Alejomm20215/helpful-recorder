@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'features/recorder/data/datasources/recorder_service.dart';
+import 'features/recorder/data/datasources/drawing_service.dart';
 import 'features/recorder/data/repositories/recorder_repository_impl.dart';
+import 'features/recorder/data/repositories/drawing_repository_impl.dart';
 import 'features/recorder/presentation/cubit/recorder_cubit.dart';
 import 'features/recorder/presentation/pages/recorder_home_page.dart';
 import 'features/settings/presentation/cubit/settings_cubit.dart';
@@ -32,6 +34,7 @@ class MyApp extends StatelessWidget {
           create:
               (context) => RecorderCubit(
                 RecorderRepositoryImpl(RecorderService()),
+                DrawingRepositoryImpl(DrawingService()),
                 context.read<SettingsCubit>(),
               ),
         ),

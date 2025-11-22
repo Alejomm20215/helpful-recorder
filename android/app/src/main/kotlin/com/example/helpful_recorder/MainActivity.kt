@@ -93,6 +93,32 @@ class MainActivity : FlutterActivity() {
                     ScreenRecorderService.instance?.updateOverlayStyle(bg, panel, icon)
                     result.success(true)
                 }
+                "showDrawingOverlay" -> {
+                    ScreenRecorderService.instance?.showDrawingOverlay()
+                    result.success(true)
+                }
+                "hideDrawingOverlay" -> {
+                    ScreenRecorderService.instance?.hideDrawingOverlay()
+                    result.success(true)
+                }
+                "setDrawingColor" -> {
+                    val color = call.argument<Int>("color") ?: android.graphics.Color.RED
+                    ScreenRecorderService.instance?.setDrawingColor(color)
+                    result.success(true)
+                }
+                "setDrawingWidth" -> {
+                    val width = call.argument<Double>("width")?.toFloat() ?: 10f
+                    ScreenRecorderService.instance?.setDrawingWidth(width)
+                    result.success(true)
+                }
+                "clearDrawing" -> {
+                    ScreenRecorderService.instance?.clearDrawing()
+                    result.success(true)
+                }
+                "undoDrawing" -> {
+                    ScreenRecorderService.instance?.undoDrawing()
+                    result.success(true)
+                }
                 else -> result.notImplemented()
             }
         }
