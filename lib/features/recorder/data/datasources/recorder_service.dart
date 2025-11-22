@@ -21,13 +21,26 @@ class RecorderService {
   }
 
   Future<bool> checkPermissions() async {
-    await [
+    final permissions = [
       Permission.storage,
       Permission.microphone,
       Permission.notification,
       Permission.systemAlertWindow,
       Permission.manageExternalStorage,
-    ].request();
+    ];
+
+    // Filter permissions that are not granted
+    final permissionsToRequest = <Permission>[];
+    for (final permission in permissions) {
+      if (!(await permission.isGranted)) {
+        permissionsToRequest.add(permission);
+      }
+    }
+
+    // Only request if there are missing permissions
+    if (permissionsToRequest.isNotEmpty) {
+      await permissionsToRequest.request();
+    }
 
     // We don't need FlutterOverlayWindow permission anymore as we use native overlay
     return await Permission.microphone.isGranted &&
