@@ -48,16 +48,6 @@ class DrawingOverlayView(context: Context) : View(context) {
             return false // Pass through if drawing is disabled
         }
 
-        // Check if touch is in the bottom area where Flutter toolbar is (bottom 200px)
-        // or top area where floating controls might be (top 300px)
-        val screenHeight = resources.displayMetrics.heightPixels
-        val touchY = event.rawY
-        
-        if (touchY > screenHeight - 200 || touchY < 300) {
-            // Touch is in UI area - pass through
-            return false
-        }
-
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 currentPath = Path().apply {

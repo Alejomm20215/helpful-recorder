@@ -30,11 +30,13 @@ class FloatingControlsManager(
         onStop: () -> Unit,
         onPause: () -> Unit,
         onResume: () -> Unit,
-        onRestart: () -> Unit
+        onRestart: () -> Unit,
+        onDraw: () -> Unit
     ) {
         if (isFloatingViewAdded) return
 
         val inflated = LayoutInflater.from(context).inflate(R.layout.layout_floating_widget, null)
+        // ... (params setup remains same) ...
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.WRAP_CONTENT,
             WindowManager.LayoutParams.WRAP_CONTENT,
@@ -56,6 +58,7 @@ class FloatingControlsManager(
         val btnPause = inflated.findViewById<ImageView>(R.id.btn_pause)
         val btnResume = inflated.findViewById<ImageView>(R.id.btn_resume)
         val btnRestart = inflated.findViewById<ImageView>(R.id.btn_restart)
+        val btnDraw = inflated.findViewById<ImageView>(R.id.btn_draw)
 
         collapsedView.setOnTouchListener(object : View.OnTouchListener {
             var initialX = 0
@@ -103,6 +106,11 @@ class FloatingControlsManager(
         btnPause.setOnClickListener { onPause() }
         btnResume.setOnClickListener { onResume() }
         btnRestart.setOnClickListener { onRestart() }
+        btnDraw.setOnClickListener { 
+            onDraw()
+            // Hide panel after selecting draw to keep screen clear
+            expandedPanel.visibility = View.GONE 
+        }
 
         try {
             windowManager.addView(inflated, params)

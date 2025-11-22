@@ -7,7 +7,6 @@ import '../cubit/recorder_state.dart';
 import '../molecules/success_card.dart';
 import '../organisms/countdown_overlay.dart';
 import '../organisms/recorder_controls.dart';
-import '../organisms/drawing_toolbar.dart';
 
 class RecorderHomePage extends StatefulWidget {
   const RecorderHomePage({super.key});
@@ -85,36 +84,6 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                 ),
               ),
 
-              // Drawing Toggle Button (only show when recording)
-              if (state is RecorderRecording)
-                Positioned(
-                  top: 50,
-                  left: 20,
-                  child: IconButton(
-                    onPressed:
-                        () => context.read<RecorderCubit>().toggleDrawing(),
-                    icon: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color:
-                            state.isDrawingEnabled
-                                ? Theme.of(context).colorScheme.primary
-                                : onSurfaceColor.withOpacity(0.05),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.edit,
-                        color:
-                            state.isDrawingEnabled
-                                ? Colors.white
-                                : onSurfaceColor,
-                        size: 18,
-                      ),
-                    ),
-                    splashRadius: 24,
-                  ),
-                ),
-
               // Main Content
               Center(
                 child: Column(
@@ -153,9 +122,6 @@ class _RecorderHomePageState extends State<RecorderHomePage> {
                   count: state.count,
                   onSkip: () => context.read<RecorderCubit>().skipCountdown(),
                 ),
-
-              // Drawing Toolbar
-              const DrawingToolbar(),
             ],
           );
         },

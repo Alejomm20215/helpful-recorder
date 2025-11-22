@@ -98,6 +98,11 @@ class ScreenRecorderService : Service() {
                         stopRecordingAndService()
                         // Notify Flutter that recording was stopped from native overlay
                         MainActivity.instance?.sendEventToFlutter("RECORDING_STOPPED:${recordingManager.filePath}")
+                        
+                        // Bring app to foreground
+                        val intent = Intent(this, MainActivity::class.java)
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        startActivity(intent)
                     },
                     onPause = {
                         recordingManager.pauseRecording()
@@ -109,6 +114,9 @@ class ScreenRecorderService : Service() {
                         stopRecordingAndService()
                         // Send event to Flutter to trigger restart
                         MainActivity.instance?.sendEventToFlutter("RECORDING_RESTART_REQUESTED")
+                    },
+                    onDraw = {
+                        showDrawingOverlay()
                     }
                 )
                 
