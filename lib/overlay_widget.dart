@@ -1,7 +1,7 @@
 import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:flutter_overlay_window/flutter_overlay_window.dart';
-import 'recorder_service.dart';
+import 'features/recorder/data/datasources/recorder_service.dart';
 
 class OverlayWidget extends StatefulWidget {
   const OverlayWidget({super.key});
@@ -24,37 +24,37 @@ class _OverlayWidgetState extends State<OverlayWidget> {
 
   void _stopRecording() async {
     // We need to communicate back to the main isolate to stop recording.
-    // But since we have a custom recorder service that uses MethodChannel, 
+    // But since we have a custom recorder service that uses MethodChannel,
     // we can try calling it from here IF the plugin supports background execution properly.
     // However, the best way is to use the port.
-    
+
     // For MVP with custom native code, the MethodChannel 'com.example.helpful_recorder/recorder'
     // needs to be registered in the isolate this overlay runs in.
-    // The 'flutter_overlay_window' might run in a separate engine. 
-    // So standard MethodChannels might not reach the SAME Main Activity/Service instance 
+    // The 'flutter_overlay_window' might run in a separate engine.
+    // So standard MethodChannels might not reach the SAME Main Activity/Service instance
     // unless our native code handles it globally.
-    
-    // Our ScreenRecorderService.kt is a Service. 
+
+    // Our ScreenRecorderService.kt is a Service.
     // The MethodChannel in MainActivity communicates with MainActivity.
     // We need to make sure we can stop the service from here.
-    
+
     // Let's try to invoke the method directly. If it fails, we use Isolate ports.
     try {
-       // Actually, stopping the service via intent is easier from native side.
-       // Let's send a message to native side via our EXISTING channel if possible, 
-       // or use the overlay plugin's mechanism to share data.
-       
-       // The flutter_overlay_window allows sharing data via shareData.
-       // But triggering an action in the main app is different.
-       
-       // Simplest for MVP: Call the stop method on our RecorderService.
-       // Since it uses MethodChannel, it talks to the Engine it's attached to.
-       // The Overlay has its own Engine. 
-       // So we need our Native Kotlin code to handle the MethodChannel from ANY Engine.
-       
-       await _recorderService.stopRecording();
-       // Close overlay
-       await FlutterOverlayWindow.closeOverlay();
+      // Actually, stopping the service via intent is easier from native side.
+      // Let's send a message to native side via our EXISTING channel if possible,
+      // or use the overlay plugin's mechanism to share data.
+
+      // The flutter_overlay_window allows sharing data via shareData.
+      // But triggering an action in the main app is different.
+
+      // Simplest for MVP: Call the stop method on our RecorderService.
+      // Since it uses MethodChannel, it talks to the Engine it's attached to.
+      // The Overlay has its own Engine.
+      // So we need our Native Kotlin code to handle the MethodChannel from ANY Engine.
+
+      await _recorderService.stopRecording();
+      // Close overlay
+      await FlutterOverlayWindow.closeOverlay();
     } catch (e) {
       log("Error stopping from overlay: $e");
     }
@@ -124,9 +124,7 @@ class _OverlayWidgetState extends State<OverlayWidget> {
 // Entry point for the overlay
 @pragma("vm:entry-point")
 void overlayMain() {
-  runApp(const MaterialApp(
-    debugShowCheckedModeBanner: false,
-    home: OverlayWidget(),
-  ));
+  runApp(
+    const MaterialApp(debugShowCheckedModeBanner: false, home: OverlayWidget()),
+  );
 }
-

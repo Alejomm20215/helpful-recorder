@@ -36,4 +36,3 @@ class RecorderFailure extends RecorderState {
   @override
   List<Object?> get props => [error];
 }
-

@@ -4,27 +4,34 @@ import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class RecorderService {
-  static const MethodChannel _channel = MethodChannel('com.example.helpful_recorder/recorder');
-  static const EventChannel _eventChannel = EventChannel('com.example.helpful_recorder/recorder_events');
-  
+  static const MethodChannel _channel = MethodChannel(
+    'com.example.helpful_recorder/recorder',
+  );
+  static const EventChannel _eventChannel = EventChannel(
+    'com.example.helpful_recorder/recorder_events',
+  );
+
   Stream<String>? _recordingEventsStream;
-  
+
   Stream<String> get recordingEvents {
-    _recordingEventsStream ??= _eventChannel.receiveBroadcastStream().map((event) => event.toString());
+    _recordingEventsStream ??= _eventChannel.receiveBroadcastStream().map(
+      (event) => event.toString(),
+    );
     return _recordingEventsStream!;
   }
-  
+
   Future<bool> checkPermissions() async {
     await [
       Permission.storage,
       Permission.microphone,
-      Permission.notification, 
+      Permission.notification,
       Permission.systemAlertWindow,
       Permission.manageExternalStorage,
     ].request();
-    
+
     // We don't need FlutterOverlayWindow permission anymore as we use native overlay
-    return await Permission.microphone.isGranted && await Permission.systemAlertWindow.isGranted; 
+    return await Permission.microphone.isGranted &&
+        await Permission.systemAlertWindow.isGranted;
   }
 
   Future<bool> prepareRecording() async {
@@ -50,7 +57,7 @@ class RecorderService {
         'videoQuality': videoQuality,
         'showTouches': showTouches,
       });
-      
+
       if (result != null) {
         log("Recording started: $fileName");
         return result;

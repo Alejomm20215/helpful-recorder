@@ -11,20 +11,22 @@ class SettingsCubit extends Cubit<SettingsState> {
   Future<void> _loadSettings() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       final qualityIndex = prefs.getInt('videoQuality') ?? 0;
       final recordAudio = prefs.getBool('recordAudio') ?? true;
       final countdownTime = prefs.getInt('countdownTime') ?? 5;
       final shakeToStop = prefs.getBool('shakeToStop') ?? false;
       final isDarkMode = prefs.getBool('isDarkMode') ?? true;
 
-      emit(SettingsState(
-        videoQuality: VideoQuality.values[qualityIndex],
-        recordAudio: recordAudio,
-        countdownTime: countdownTime,
-        shakeToStop: shakeToStop,
-        themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
-      ));
+      emit(
+        SettingsState(
+          videoQuality: VideoQuality.values[qualityIndex],
+          recordAudio: recordAudio,
+          countdownTime: countdownTime,
+          shakeToStop: shakeToStop,
+          themeMode: isDarkMode ? ThemeMode.dark : ThemeMode.light,
+        ),
+      );
     } catch (e) {
       debugPrint('Error loading settings: $e');
       // Fallback to default state if SharedPreferences fails
@@ -62,4 +64,3 @@ class SettingsCubit extends Cubit<SettingsState> {
     emit(state.copyWith(themeMode: isDark ? ThemeMode.dark : ThemeMode.light));
   }
 }
-
