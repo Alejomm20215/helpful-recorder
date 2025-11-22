@@ -13,18 +13,23 @@ class CustomSnackBar extends StatelessWidget {
     this.onDismiss,
   });
 
-  static void show(BuildContext context, {required String message, bool isError = false}) {
+  static void show(
+    BuildContext context, {
+    required String message,
+    bool isError = false,
+  }) {
     final overlay = Overlay.of(context);
     late OverlayEntry overlayEntry;
-    
+
     overlayEntry = OverlayEntry(
-      builder: (context) => _TopSnackBarEntry(
-        message: message,
-        isError: isError,
-        onDismiss: () {
-          overlayEntry.remove();
-        },
-      ),
+      builder:
+          (context) => _TopSnackBarEntry(
+            message: message,
+            isError: isError,
+            onDismiss: () {
+              overlayEntry.remove();
+            },
+          ),
     );
 
     overlay.insert(overlayEntry);
@@ -39,7 +44,10 @@ class CustomSnackBar extends StatelessWidget {
         color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isError ? Colors.redAccent.withOpacity(0.3) : Colors.greenAccent.withOpacity(0.3),
+          color:
+              isError
+                  ? Colors.redAccent.withOpacity(0.3)
+                  : Colors.greenAccent.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
@@ -55,11 +63,16 @@ class CustomSnackBar extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isError ? Colors.redAccent.withOpacity(0.1) : Colors.greenAccent.withOpacity(0.1),
+              color:
+                  isError
+                      ? Colors.redAccent.withOpacity(0.1)
+                      : Colors.greenAccent.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
-              isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              isError
+                  ? Icons.error_outline_rounded
+                  : Icons.check_circle_outline_rounded,
               color: isError ? Colors.redAccent : Colors.greenAccent,
               size: 20,
             ),
@@ -98,7 +111,8 @@ class _TopSnackBarEntry extends StatefulWidget {
   State<_TopSnackBarEntry> createState() => _TopSnackBarEntryState();
 }
 
-class _TopSnackBarEntryState extends State<_TopSnackBarEntry> with SingleTickerProviderStateMixin {
+class _TopSnackBarEntryState extends State<_TopSnackBarEntry>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
   late Animation<double> _fadeAnimation;
@@ -116,19 +130,21 @@ class _TopSnackBarEntryState extends State<_TopSnackBarEntry> with SingleTickerP
     _offsetAnimation = Tween<Offset>(
       begin: const Offset(0, -1.0),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.elasticOut,
-      reverseCurve: Curves.easeInBack,
-    ));
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.elasticOut,
+        reverseCurve: Curves.easeInBack,
+      ),
+    );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+        reverseCurve: Curves.easeOut,
+      ),
+    );
 
     // Start animation
     _controller.forward();

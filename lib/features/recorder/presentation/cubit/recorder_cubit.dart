@@ -2,23 +2,24 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sensors_plus/sensors_plus.dart';
-import '../recorder_service.dart';
+import '../../domain/repositories/recorder_repository.dart';
 import 'recorder_state.dart';
-import 'settings_cubit.dart';
+import '../../../../features/settings/presentation/cubit/settings_cubit.dart';
 
 class RecorderCubit extends Cubit<RecorderState> {
-  final RecorderService _recorderService;
+  final RecorderRepository _recorderRepository;
   final SettingsCubit _settingsCubit;
   Timer? _countdownTimer;
   StreamSubscription? _eventsSubscription;
   StreamSubscription? _accelerometerSubscription;
 
-  RecorderCubit(this._recorderService, this._settingsCubit) : super(RecorderInitial()) {
+  RecorderCubit(this._recorderRepository, this._settingsCubit)
+    : super(RecorderInitial()) {
     _listenToRecordingEvents();
   }
-  
+
   void _listenToRecordingEvents() {
-    _eventsSubscription = _recorderService.recordingEvents.listen((event) {
+    _eventsSubscription = _recorderRepository.recordingEvents.listen((event) {
       if (event.startsWith('RECORDING_STOPPED')) {
         // When native service stops recording, reset to initial state
         if (event.contains(':')) {
@@ -44,7 +45,9 @@ class RecorderCubit extends Cubit<RecorderState> {
     if (!_settingsCubit.state.shakeToStop) return;
 
     _accelerometerSubscription?.cancel();
-    _accelerometerSubscription = accelerometerEvents.listen((AccelerometerEvent event) {
+    _accelerometerSubscription = accelerometerEvents.listen((
+      AccelerometerEvent event,
+    ) {
       double g = 9.8;
       double x = event.x;
       double y = event.y;
@@ -67,7 +70,7 @@ class RecorderCubit extends Cubit<RecorderState> {
 
   Future<void> checkPermissions() async {
     try {
-      final hasPermission = await _recorderService.checkPermissions();
+      final hasPermission = await _recorderRepository.checkPermissions();
       if (hasPermission) {
         emit(RecorderInitial());
       } else {
@@ -80,13 +83,13 @@ class RecorderCubit extends Cubit<RecorderState> {
 
   void prepareRecording() async {
     // 1. Ask for permission FIRST
-    final hasPermission = await _recorderService.checkPermissions();
+    final hasPermission = await _recorderRepository.checkPermissions();
     if (!hasPermission) {
       emit(RecorderPermissionRequired());
       return;
     }
 
-    await _recorderService.updateOverlayStyle(
+    await _recorderRepository.updateOverlayStyle(
       backgroundColor: 0xCC000000,
       panelColor: 0xFF1F1F1F,
       iconColor: 0xFFFFFFFF,
@@ -94,7 +97,7 @@ class RecorderCubit extends Cubit<RecorderState> {
 
     // 2. Ask for MediaProjection Permission (System Dialog)
     try {
-      final ready = await _recorderService.prepareRecording();
+      final ready = await _recorderRepository.prepareRecording();
       if (ready) {
         // 3. If accepted, START COUNTDOWN
         startCountdown();
@@ -131,13 +134,13 @@ class RecorderCubit extends Cubit<RecorderState> {
   Future<void> startRecording() async {
     try {
       emit(RecorderRecording());
-      
+
       // Start Native Recording (Permission already granted in prepare step)
       String fileName = "Rec_${DateTime.now().millisecondsSinceEpoch}";
-      
+
       final settings = _settingsCubit.state;
-      
-      await _recorderService.startRecording(
+
+      await _recorderRepository.startRecording(
         fileName: fileName,
         recordAudio: settings.recordAudio,
         videoQuality: settings.videoQuality.name,
@@ -146,7 +149,6 @@ class RecorderCubit extends Cubit<RecorderState> {
 
       // Start shake detection if enabled
       _startAccelerometer();
-
     } catch (e) {
       emit(RecorderFailure(e.toString()));
     }
@@ -155,13 +157,13 @@ class RecorderCubit extends Cubit<RecorderState> {
   Future<void> stopRecording() async {
     try {
       _stopAccelerometer();
-      final path = await _recorderService.stopRecording();
+      final path = await _recorderRepository.stopRecording();
       emit(RecorderSuccess(path));
     } catch (e) {
       emit(RecorderFailure(e.toString()));
     }
   }
-  
+
   void reset() {
     emit(RecorderInitial());
   }

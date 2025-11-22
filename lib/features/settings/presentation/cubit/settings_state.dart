@@ -36,11 +36,10 @@ class SettingsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        videoQuality,
-        recordAudio,
-        countdownTime,
-        shakeToStop,
-        themeMode,
-      ];
+    videoQuality,
+    recordAudio,
+    countdownTime,
+    shakeToStop,
+    themeMode,
+  ];
 }
-
