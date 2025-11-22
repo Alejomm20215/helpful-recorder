@@ -1,20 +1,26 @@
 import 'dart:async';
 import 'dart:math';
+import 'dart:ui';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import '../../domain/repositories/recorder_repository.dart';
+import '../../domain/repositories/drawing_repository.dart';
 import 'recorder_state.dart';
 import '../../../../features/settings/presentation/cubit/settings_cubit.dart';
 
 class RecorderCubit extends Cubit<RecorderState> {
   final RecorderRepository _recorderRepository;
+  final DrawingRepository _drawingRepository;
   final SettingsCubit _settingsCubit;
   Timer? _countdownTimer;
   StreamSubscription? _eventsSubscription;
   StreamSubscription? _accelerometerSubscription;
 
-  RecorderCubit(this._recorderRepository, this._settingsCubit)
-    : super(RecorderInitial()) {
+  RecorderCubit(
+    this._recorderRepository,
+    this._drawingRepository,
+    this._settingsCubit,
+  ) : super(RecorderInitial()) {
     _listenToRecordingEvents();
   }
 
@@ -168,11 +174,54 @@ class RecorderCubit extends Cubit<RecorderState> {
     emit(RecorderInitial());
   }
 
+  // Drawing methods
+  Future<void> toggleDrawing() async {
+    if (state is RecorderRecording) {
+      final currentState = state as RecorderRecording;
+      final newDrawingState = !currentState.isDrawingEnabled;
+
+      if (newDrawingState) {
+        await _drawingRepository.showDrawingOverlay();
+      } else {
+        await _drawingRepository.hideDrawingOverlay();
+      }
+
+      emit(currentState.copyWith(isDrawingEnabled: newDrawingState));
+    }
+  }
+
+  Future<void> setDrawingColor(int color) async {
+    if (state is RecorderRecording) {
+      final currentState = state as RecorderRecording;
+      await _drawingRepository.setDrawingColor(Color(color));
+      emit(currentState.copyWith(currentDrawingColor: color));
+    }
+  }
+
+  Future<void> setDrawingWidth(double width) async {
+    await _drawingRepository.setDrawingWidth(width);
+  }
+
+  Future<void> clearDrawing() async {
+    await _drawingRepository.clearDrawing();
+  }
+
+  Future<void> undoDrawing() async {
+    await _drawingRepository.undoDrawing();
+  }
+
   @override
   Future<void> close() {
     _countdownTimer?.cancel();
     _eventsSubscription?.cancel();
     _accelerometerSubscription?.cancel();
+    // Hide drawing overlay if active
+    if (state is RecorderRecording) {
+      final currentState = state as RecorderRecording;
+      if (currentState.isDrawingEnabled) {
+        _drawingRepository.hideDrawingOverlay();
+      }
+    }
     return super.close();
   }
 }
